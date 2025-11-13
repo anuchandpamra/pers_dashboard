@@ -1,0 +1,1054 @@
+{% extends 'results_viewer/base.html' %}
+
+{% block content %}
+<div class="row">
+    <div class="col-12">
+        <nav aria-label="breadcrumb">
+            <ol class="breadcrumb">
+                <li class="breadcrumb-item"><a href="{% url 'index' %}">Dashboard</a></li>
+                <li class="breadcrumb-item active">{{ result_info.display_name }}</li>
+            </ol>
+        </nav>
+        
+        <h1 class="mb-4">
+            <i class="fas fa-chart-bar"></i> {{ result_info.display_name }}
+        </h1>
+    </div>
+</div>
+
+<!-- Summary Stats -->
+<div class="row mb-4">
+    <div class="col-lg-3 col-md-4 col-sm-6 mb-3">
+        <div class="card stats-card text-center text-white">
+            <div class="card-body">
+                <h3>{{ stats.total_products }}</h3>
+                <p class="mb-0">Total Products</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-lg-3 col-md-4 col-sm-6 mb-3">
+        <div class="card stats-card text-center text-white">
+            <div class="card-body">
+                <h3>{{ stats.total_golden_records }}</h3>
+                <p class="mb-0">Golden Records</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-lg-2 col-md-4 col-sm-6 mb-3">
+        <div class="card stats-card text-center text-white">
+            <div class="card-body">
+                <h3>{{ stats.matched_products }}</h3>
+                <p class="mb-0">Matched</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-lg-2 col-md-4 col-sm-6 mb-3">
+        <div class="card stats-card text-center text-white">
+            <div class="card-body">
+                <h3>{{ stats.unique_products }}</h3>
+                <p class="mb-0">Unique</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-lg-2 col-md-4 col-sm-6 mb-3">
+        <div class="card stats-card text-center text-white">
+            <div class="card-body">
+                <h3>{{ stats.avg_confidence|floatformat:3 }}</h3>
+                <p class="mb-0">Avg Confidence</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Navigation Tabs -->
+<ul class="nav nav-tabs" id="resultsTabs" role="tablist">
+    {% if not result_info.is_scalable %}
+    <li class="nav-item" role="presentation">
+        <button class="nav-link active" id="pair-scores-tab" data-bs-toggle="tab" data-bs-target="#pair-scores" type="button" role="tab">
+            <i class="fas fa-link"></i> Pair Scores ({{ stats.total_pair_scores }})
+        </button>
+    </li>
+    {% endif %}
+    <li class="nav-item" role="presentation">
+        <button class="nav-link {% if result_info.is_scalable %}active{% endif %}" id="golden-records-tab" data-bs-toggle="tab" data-bs-target="#golden-records" type="button" role="tab">
+            <i class="fas fa-star"></i> Golden Records ({{ stats.total_products }})
+        </button>
+    </li>
+</ul>
+
+<div class="tab-content" id="resultsTabsContent">
+    <!-- Pair Scores Tab (hidden for scalable/database sources) -->
+    {% if not result_info.is_scalable %}
+    <div class="tab-pane fade show active" id="pair-scores" role="tabpanel">
+    {% else %}
+    <div class="tab-pane fade" id="pair-scores" role="tabpanel" style="display: none;">
+    {% endif %}
+        <div class="card mt-3">
+            <div class="card-header">
+                <div class="row align-items-center">
+                    <div class="col-md-6">
+                        <h5 class="mb-0">Product Pair Similarity Scores</h5>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="row">
+                            <div class="col-md-6">
+                                <label for="scoreRange" class="form-label">Min Score: <span id="minScoreValue">0.5</span></label>
+                                <input type="range" class="form-range" id="scoreRange" min="0" max="1" step="0.01" value="0.5">
+                            </div>
+                            <div class="col-md-6">
+                                <label for="searchInput" class="form-label">Search Products</label>
+                                <input type="text" class="form-control" id="searchInput" placeholder="Search products...">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="card-body">
+                <div id="pairScoresTable">
+                    <div class="text-center">
+                        <div class="spinner-border" role="status">
+                            <span class="visually-hidden">Loading...</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Golden Records Tab -->
+    <div class="tab-pane fade {% if result_info.is_scalable %}show active{% endif %}" id="golden-records" role="tabpanel">
+        <div class="card mt-3">
+            <div class="card-header">
+                <div class="row align-items-center">
+                    <div class="col-md-6">
+                        <h5 class="mb-0">Golden Records</h5>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="row align-items-center">
+                            <div class="col-md-8">
+                                <div class="row">
+                                    <div class="col-md-4">
+                                        <select class="form-select" id="sizeFilter">
+                                            <option value="">All Products</option>
+                                            <option value="matched">Matched Only</option>
+                                            <option value="unique">Unique Only</option>
+                                        </select>
+                                    </div>
+                                    <div class="col-md-4">
+                                        <input type="text" class="form-control" id="manufacturerFilter" placeholder="Manufacturer...">
+                                    </div>
+                                    <div class="col-md-4">
+                                        <input type="text" class="form-control" id="searchGoldenRecords" placeholder="Search...">
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-md-4 text-end">
+                                <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#compareAnyModal">
+                                    <i class="fas fa-balance-scale"></i> Compare Any Products
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="card-body">
+                <div id="goldenRecordsTable">
+                    <div class="text-center">
+                        <div class="spinner-border" role="status">
+                            <span class="visually-hidden">Loading...</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Product Detail Modal -->
+<div class="modal fade" id="productDetailModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Product Details</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body" id="productDetailContent">
+                <div class="text-center">
+                    <div class="spinner-border" role="status">
+                        <span class="visually-hidden">Loading...</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Product Comparison Modal -->
+<div class="modal fade" id="compareModal" tabindex="-1">
+    <div class="modal-dialog modal-xl">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Product Comparison</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body" id="compareModalBody">
+                <div class="text-center">
+                    <div class="spinner-border" role="status">
+                        <span class="visually-hidden">Loading...</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Compare Any Products Modal -->
+<div class="modal fade" id="compareAnyModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Compare Any Two Products</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <form id="compareAnyForm">
+                    <div class="mb-3">
+                        <label for="productAIdInput" class="form-label">Product A ID</label>
+                        <input type="text" class="form-control" id="productAIdInput" placeholder="Enter product ID..." required>
+                    </div>
+                    <div class="mb-3">
+                        <label for="productBIdInput" class="form-label">Product B ID</label>
+                        <input type="text" class="form-control" id="productBIdInput" placeholder="Enter product ID..." required>
+                    </div>
+                    <div id="compareAnyError" class="alert alert-danger d-none" role="alert"></div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-primary" onclick="compareAnyProducts()">
+                    <i class="fas fa-balance-scale"></i> Compare
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+const resultsName = '{{ result_info.name }}';
+let currentPage = 1;
+let currentGoldenRecordsPage = 1;
+
+// Load pair scores
+function loadPairScores(page = 1) {
+    const minScore = document.getElementById('scoreRange').value;
+    const search = document.getElementById('searchInput').value;
+    
+    fetch(`/api/results/${resultsName}/pair-scores/?page=${page}&min_score=${minScore}&search=${search}`)
+        .then(response => response.json())
+        .then(data => {
+            displayPairScores(data);
+            currentPage = page;
+        })
+        .catch(error => {
+            console.error('Error loading pair scores:', error);
+            document.getElementById('pairScoresTable').innerHTML = '<div class="alert alert-danger">Error loading pair scores</div>';
+        });
+}
+
+// Display pair scores
+function displayPairScores(data) {
+    const container = document.getElementById('pairScoresTable');
+    
+    if (data.data.length === 0) {
+        container.innerHTML = '<div class="alert alert-info">No results found</div>';
+        return;
+    }
+    
+    let html = `
+        <div class="table-responsive">
+            <table class="table table-hover">
+                <thead>
+                    <tr>
+                        <th>Product A</th>
+                        <th>Product B</th>
+                        <th>Similarity Score</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+    `;
+    
+    data.data.forEach(row => {
+        const score = parseFloat(row.score);
+        const scorePercent = Math.round(score * 100);
+        const scoreColor = score > 0.8 ? 'success' : score > 0.5 ? 'warning' : 'danger';
+        
+        html += `
+            <tr>
+                <td>
+                    <code>${row.L}</code>
+                    <button class="btn btn-sm btn-outline-primary ms-2" onclick="showProductDetail('${row.L.split('::')[1]}')">
+                        <i class="fas fa-eye"></i>
+                    </button>
+                </td>
+                <td>
+                    <code>${row.R}</code>
+                    <button class="btn btn-sm btn-outline-primary ms-2" onclick="showProductDetail('${row.R.split('::')[1]}')">
+                        <i class="fas fa-eye"></i>
+                    </button>
+                </td>
+                <td>
+                    <div class="d-flex align-items-center">
+                        <div class="confidence-bar me-2" style="width: 100px;">
+                            <div class="confidence-fill" style="width: ${scorePercent}%"></div>
+                        </div>
+                        <span class="badge bg-${scoreColor}">${scorePercent}%</span>
+                    </div>
+                </td>
+                <td>
+                    <button class="btn btn-sm btn-primary" onclick="compareProducts('${row.L}', '${row.R}')">
+                        <i class="fas fa-balance-scale"></i> Compare
+                    </button>
+                </td>
+            </tr>
+        `;
+    });
+    
+    html += `
+                </tbody>
+            </table>
+        </div>
+    `;
+    
+    // Add pagination
+    if (data.pages > 1) {
+        html += `
+            <nav aria-label="Pair scores pagination">
+                <div class="d-flex justify-content-center align-items-center gap-2">
+                    <ul class="pagination mb-0">
+                        <li class="page-item ${!data.has_previous ? 'disabled' : ''}">
+                            <a class="page-link" href="#" onclick="loadPairScores(${data.current_page - 1})">Previous</a>
+                        </li>
+                        <li class="page-item active">
+                            <span class="page-link">${data.current_page} of ${data.pages}</span>
+                        </li>
+                        <li class="page-item ${!data.has_next ? 'disabled' : ''}">
+                            <a class="page-link" href="#" onclick="loadPairScores(${data.current_page + 1})">Next</a>
+                        </li>
+                    </ul>
+                    <div class="input-group" style="width: 200px;">
+                        <input type="number" 
+                               class="form-control" 
+                               id="pairScoresPageInput" 
+                               min="1" 
+                               max="${data.pages}" 
+                               placeholder="Page #"
+                               onkeypress="if(event.key === 'Enter') { jumpToPairScoresPage(${data.pages}); }">
+                        <button class="btn btn-primary" 
+                                type="button" 
+                                onclick="jumpToPairScoresPage(${data.pages})">
+                            <i class="fas fa-arrow-right"></i> Go
+                        </button>
+                    </div>
+                </div>
+            </nav>
+        `;
+    }
+    
+    container.innerHTML = html;
+}
+
+// Load golden records
+function loadGoldenRecords(page = 1) {
+    const sizeFilter = document.getElementById('sizeFilter').value;
+    const manufacturer = document.getElementById('manufacturerFilter').value;
+    const search = document.getElementById('searchGoldenRecords').value;
+    
+    fetch(`/api/results/${resultsName}/golden-records/?page=${page}&size=${sizeFilter}&manufacturer=${manufacturer}&search=${search}`)
+        .then(response => response.json())
+        .then(data => {
+            displayGoldenRecords(data);
+            currentGoldenRecordsPage = page;
+        })
+        .catch(error => {
+            console.error('Error loading golden records:', error);
+            document.getElementById('goldenRecordsTable').innerHTML = `<div class="alert alert-danger">Error loading golden records: ${error.message}</div>`;
+        });
+}
+
+// Display golden records
+function displayGoldenRecords(data) {
+    const container = document.getElementById('goldenRecordsTable');
+    
+    console.log('Golden records data:', data);
+    
+    if (!data || !data.data || data.data.length === 0) {
+        container.innerHTML = '<div class="alert alert-info">No results found</div>';
+        return;
+    }
+    
+    let html = '<div class="row">';
+    
+    data.data.forEach(product => {
+        const sizeBadge = product.size > 1 ? 'success' : 'secondary';
+        const sizeText = product.size > 1 ? 'Matched' : 'Unique';
+        
+        html += `
+            <div class="col-md-6 col-lg-4 mb-3">
+                <div class="card product-card h-100">
+                    <div class="card-header d-flex justify-content-between align-items-center">
+                        <h6 class="mb-0">${product.guid}</h6>
+                        <span class="badge bg-${sizeBadge}">${sizeText} (${product.size})</span>
+                    </div>
+                    <div class="card-body">
+                        <h6 class="card-title">${product.title || 'No Title'}</h6>
+                        <p class="card-text">
+                            <strong>Manufacturer:</strong> ${product.manufacturer || 'N/A'}<br>
+                            <strong>Part Number:</strong> ${product.part_number || 'N/A'}<br>
+                            <strong>UNSPSC:</strong> ${product.unspsc || 'N/A'}
+                        </p>
+                        <p class="card-text text-muted small">
+                            ${product.description ? product.description.substring(0, 100) + '...' : 'No description'}
+                        </p>
+                    </div>
+                    <div class="card-footer">
+                        <button class="btn btn-primary btn-sm w-100" onclick="showProductDetail('${product.guid}')">
+                            <i class="fas fa-eye"></i> View Details
+                        </button>
+                    </div>
+                </div>
+            </div>
+        `;
+    });
+    
+    html += '</div>';
+    
+    // Add pagination
+    if (data.pages > 1) {
+        html += `
+            <nav aria-label="Golden records pagination">
+                <div class="d-flex justify-content-center align-items-center gap-2">
+                    <ul class="pagination mb-0">
+                        <li class="page-item ${!data.has_previous ? 'disabled' : ''}">
+                            <a class="page-link" href="#" onclick="loadGoldenRecords(${data.current_page - 1})">Previous</a>
+                        </li>
+                        <li class="page-item active">
+                            <span class="page-link">${data.current_page} of ${data.pages}</span>
+                        </li>
+                        <li class="page-item ${!data.has_next ? 'disabled' : ''}">
+                            <a class="page-link" href="#" onclick="loadGoldenRecords(${data.current_page + 1})">Next</a>
+                        </li>
+                    </ul>
+                    <div class="input-group" style="width: 200px;">
+                        <input type="number" 
+                               class="form-control" 
+                               id="goldenRecordsPageInput" 
+                               min="1" 
+                               max="${data.pages}" 
+                               placeholder="Page #"
+                               onkeypress="if(event.key === 'Enter') { jumpToGoldenRecordsPage(${data.pages}); }">
+                        <button class="btn btn-primary" 
+                                type="button" 
+                                onclick="jumpToGoldenRecordsPage(${data.pages})">
+                            <i class="fas fa-arrow-right"></i> Go
+                        </button>
+                    </div>
+                </div>
+            </nav>
+        `;
+    }
+    
+    container.innerHTML = html;
+}
+
+// Show product detail modal
+function showProductDetail(productId) {
+    // Reset selection when opening a new golden record
+    selectedProducts = [];
+    
+    const modal = new bootstrap.Modal(document.getElementById('productDetailModal'));
+    const content = document.getElementById('productDetailContent');
+    
+    content.innerHTML = '<div class="text-center"><div class="spinner-border" role="status"></div></div>';
+    modal.show();
+    
+    fetch(`/api/results/${resultsName}/products/${productId}/`)
+        .then(response => response.json())
+        .then(data => {
+            // Check if this is scalable output (has size > 1 and multiple linked products)
+            const isScalableWithMultiple = data.linked_products && data.linked_products.length >= 2;
+            const guid = data.product.guid || 'N/A';
+            
+            content.innerHTML = `
+                <!-- Fixed Product Information Section -->
+                <div class="row">
+                    <div class="col-md-6">
+                        <h6>Product Information</h6>
+                        <table class="table table-sm">
+                            <tr><td><strong>GUID:</strong></td><td>${guid}</td></tr>
+                            <tr><td><strong>Manufacturer:</strong></td><td>${data.product.manufacturer || 'N/A'}</td></tr>
+                            <tr><td><strong>Part Number:</strong></td><td>${data.product.part_number || 'N/A'}</td></tr>
+                            <tr><td><strong>UNSPSC:</strong></td><td>${data.product.unspsc || 'N/A'}</td></tr>
+                            <tr><td><strong>GTIN:</strong></td><td>${data.product.gtin_primary || 'N/A'}</td></tr>
+                            <tr><td><strong>Size:</strong></td><td>${data.product.size || 'N/A'}</td></tr>
+                        </table>
+                    </div>
+                    <div class="col-md-6">
+                        <h6>Description</h6>
+                        <p>${data.product.description || 'No description available'}</p>
+                    </div>
+                </div>
+                
+                ${isScalableWithMultiple ? `
+                <!-- Fixed Compare Button Section -->
+                <div class="row mt-2 mb-3">
+                    <div class="col-12 d-flex justify-content-between align-items-center">
+                        <div>
+                            <h6 class="mb-0">Linked Products (${data.linked_products.length})</h6>
+                            <p class="text-muted small mb-0">Select 2 products to compare</p>
+                        </div>
+                        <button id="compareSelectedBtn" 
+                                class="btn btn-primary" 
+                                onclick="compareSelectedProducts('${guid}')"
+                                disabled>
+                            <i class="fas fa-balance-scale"></i> Compare Selected (0)
+                        </button>
+                    </div>
+                </div>
+                
+                <hr>
+                
+                <!-- Scrollable Product List -->
+                <div class="row">
+                    <div class="col-12">
+                        <div style="max-height: 400px; overflow-y: auto;">
+                            <table class="table table-sm table-hover">
+                                <thead class="table-light" style="position: sticky; top: 0; z-index: 10;">
+                                    <tr>
+                                        <th style="width: 40px;">Select</th>
+                                        <th>Vendor</th>
+                                        <th>Product ID</th>
+                                        <th>Confidence</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    ${data.linked_products.map(link => `
+                                        <tr>
+                                            <td>
+                                                <input type="checkbox" 
+                                                       class="form-check-input product-select-checkbox" 
+                                                       value="${link.product_id}"
+                                                       onclick="toggleProductSelection(this, '${guid}')">
+                                            </td>
+                                            <td>${link.contract_number}</td>
+                                            <td>${link.product_id}</td>
+                                            <td>${(link.link_confidence * 100).toFixed(1)}%</td>
+                                        </tr>
+                                    `).join('')}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+                ` : `
+                <!-- Non-scalable or single product: original layout -->
+                <div class="row mt-3">
+                    <div class="col-12">
+                        <h6>Linked Products (${data.linked_products.length})</h6>
+                        <div class="table-responsive">
+                            <table class="table table-sm">
+                                <thead>
+                                    <tr>
+                                        <th>Vendor</th>
+                                        <th>Product ID</th>
+                                        <th>Confidence</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    ${data.linked_products.map(link => `
+                                        <tr>
+                                            <td>${link.contract_number}</td>
+                                            <td>${link.product_id}</td>
+                                            <td>${(link.link_confidence * 100).toFixed(1)}%</td>
+                                        </tr>
+                                    `).join('')}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+                `}
+            `;
+        })
+        .catch(error => {
+            content.innerHTML = '<div class="alert alert-danger">Error loading product details</div>';
+        });
+}
+
+// Compare products
+function compareProducts(productA, productB) {
+    // Extract product IDs from the full format (A::ID or B::ID)
+    const productAId = productA.split('::')[1];
+    const productBId = productB.split('::')[1];
+    
+    // Show loading modal
+    const modal = document.getElementById('compareModal');
+    const modalBody = document.getElementById('compareModalBody');
+    modalBody.innerHTML = `
+        <div class="text-center">
+            <div class="spinner-border" role="status">
+                <span class="visually-hidden">Loading comparison...</span>
+            </div>
+            <p class="mt-2">Loading detailed comparison...</p>
+        </div>
+    `;
+    
+    // Show modal
+    const bsModal = new bootstrap.Modal(modal);
+    bsModal.show();
+    
+    // Fetch comparison data
+    fetch(`/api/results/${resultsName}/compare/${productAId}/${productBId}/`)
+        .then(response => response.json())
+        .then(data => {
+            if (data.error) {
+                modalBody.innerHTML = `<div class="alert alert-danger">${data.error}</div>`;
+                return;
+            }
+            
+            displayComparison(data);
+        })
+        .catch(error => {
+            console.error('Error loading comparison:', error);
+            modalBody.innerHTML = `<div class="alert alert-danger">Error loading comparison: ${error.message}</div>`;
+        });
+}
+
+function displayComparison(data) {
+    const modalBody = document.getElementById('compareModalBody');
+    const { product_a, product_b, comparison } = data;
+    
+    modalBody.innerHTML = `
+        <div class="row">
+            <div class="col-md-6">
+                <h5>Product A</h5>
+                <div class="card">
+                    <div class="card-body">
+                        <p class="card-text">
+                            <strong>Manufacturer:</strong> ${product_a.manufacturer || 'N/A'}<br>
+                            <strong>Part Number:</strong> ${product_a.part_number || 'N/A'}<br>
+                            <strong>UNSPSC:</strong> ${product_a.unspsc || 'N/A'}<br>
+                            <strong>GTIN:</strong> ${product_a.gtin || 'N/A'}
+                        </p>
+                        <div class="mt-2">
+                            <small class="text-muted"><strong>Title:</strong></small><br>
+                            <small>${product_a.title || 'N/A'}</small>
+                        </div>
+                        <div class="mt-2">
+                            <small class="text-muted"><strong>Description:</strong></small><br>
+                            <small ${product_a.description && product_a.description.length > 150 ? `title="${product_a.description}" style="cursor: help;"` : ''}>${product_a.description ? (product_a.description.length > 150 ? product_a.description.substring(0, 150) + '...' : product_a.description) : 'N/A'}</small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-6">
+                <h5>Product B</h5>
+                <div class="card">
+                    <div class="card-body">
+                        <p class="card-text">
+                            <strong>Manufacturer:</strong> ${product_b.manufacturer || 'N/A'}<br>
+                            <strong>Part Number:</strong> ${product_b.part_number || 'N/A'}<br>
+                            <strong>UNSPSC:</strong> ${product_b.unspsc || 'N/A'}<br>
+                            <strong>GTIN:</strong> ${product_b.gtin || 'N/A'}
+                        </p>
+                        <div class="mt-2">
+                            <small class="text-muted"><strong>Title:</strong></small><br>
+                            <small>${product_b.title || 'N/A'}</small>
+                        </div>
+                        <div class="mt-2">
+                            <small class="text-muted"><strong>Description:</strong></small><br>
+                            <small ${product_b.description && product_b.description.length > 150 ? `title="${product_b.description}" style="cursor: help;"` : ''}>${product_b.description ? (product_b.description.length > 150 ? product_b.description.substring(0, 150) + '...' : product_b.description) : 'N/A'}</small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <hr>
+        
+        <div class="row">
+            <div class="col-12">
+                <h5>Similarity Analysis</h5>
+                <div class="card">
+                    <div class="card-body">
+                        <div class="row mb-3">
+                            <div class="col-md-6">
+                                <h6>Overall Score</h6>
+                                <div class="progress">
+                                    <div class="progress-bar" role="progressbar" style="width: ${comparison.overall_score * 100}%">
+                                        ${Math.round(comparison.overall_score * 100)}%
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="row">
+                            <div class="col-md-6">
+                                <h6>Part Number Analysis</h6>
+                                <div class="mb-2">
+                                    <strong>Product A Variants:</strong>
+                                    <ul class="list-unstyled">
+                                        ${comparison.part_number.a_variants.map(v => `<li><code>${v}</code></li>`).join('')}
+                                    </ul>
+                                </div>
+                                <div class="mb-2">
+                                    <strong>Product B Variants:</strong>
+                                    <ul class="list-unstyled">
+                                        ${comparison.part_number.b_variants.map(v => `<li><code>${v}</code></li>`).join('')}
+                                    </ul>
+                                </div>
+                                <div class="mb-2">
+                                    <strong>Exact Match:</strong> ${comparison.part_number.exact_match ? 'Yes' : 'No'}<br>
+                                    <strong>Jaro-Winkler:</strong> ${comparison.part_number.jaro_winkler}<br>
+                                    <strong>Score Contribution:</strong> ${comparison.part_number.score_contribution.toFixed(3)}
+                                </div>
+                            </div>
+                            
+                            <div class="col-md-6">
+                                <h6>Manufacturer Analysis</h6>
+                                <div class="mb-2">
+                                    <strong>Product A Normalized:</strong> ${comparison.manufacturer.a_normalized || 'N/A'}<br>
+                                    <strong>Product B Normalized:</strong> ${comparison.manufacturer.b_normalized || 'N/A'}<br>
+                                    <strong>Jaro-Winkler:</strong> ${comparison.manufacturer.jaro_winkler}<br>
+                                    <strong>Score Contribution:</strong> ${comparison.manufacturer.score_contribution.toFixed(3)}
+                                </div>
+                                
+                                ${comparison.gtin ? `
+                                <h6>GTIN Analysis</h6>
+                                <div class="mb-2">
+                                    <strong>Product A GTIN:</strong> ${comparison.gtin.a_value || 'N/A'}<br>
+                                    <strong>Product B GTIN:</strong> ${comparison.gtin.b_value || 'N/A'}<br>
+                                    <strong>Exact Match:</strong> ${comparison.gtin.exact_match ? 'Yes' : 'No'}<br>
+                                    <strong>Mismatch:</strong> ${comparison.gtin.mismatch ? 'Yes' : 'No'}<br>
+                                    <strong>Score Contribution:</strong> ${comparison.gtin.score_contribution.toFixed(3)}
+                                </div>
+                                ` : ''}
+                                
+                                <h6>Text Similarity</h6>
+                                <div class="mb-2">
+                                    <strong>Title Similarity:</strong> ${comparison.text.title_similarity !== undefined ? comparison.text.title_similarity.toFixed(3) : 'N/A'}<br>
+                                    <strong>Description Similarity:</strong> ${comparison.text.description_similarity !== undefined ? comparison.text.description_similarity.toFixed(3) : 'N/A'}<br>
+                                    <strong>Jaccard (from features):</strong> ${comparison.features.text_jacc !== undefined ? comparison.features.text_jacc.toFixed(3) : 'N/A'}<br>
+                                    <strong>TF-IDF Cosine (from features):</strong> ${comparison.features.text_tfidf_cos !== undefined ? comparison.features.text_tfidf_cos.toFixed(3) : 'N/A'}<br>
+                                    <strong>Score Contribution:</strong> ${comparison.text.score_contribution !== undefined ? comparison.text.score_contribution.toFixed(3) : 'N/A'}
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="row mt-3">
+                            <div class="col-12">
+                                <h6>Score Breakdown</h6>
+                                <div class="table-responsive">
+                                    <table class="table table-sm table-bordered">
+                                        <thead class="table-light">
+                                            <tr>
+                                                <th>Component</th>
+                                                <th>Score Contribution</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            <tr>
+                                                <td>Part Number</td>
+                                                <td>${comparison.part_number.score_contribution.toFixed(3)}</td>
+                                            </tr>
+                                            <tr>
+                                                <td>Manufacturer</td>
+                                                <td>${comparison.manufacturer.score_contribution.toFixed(3)}</td>
+                                            </tr>
+                                            <tr>
+                                                <td>Text Similarity</td>
+                                                <td>${comparison.text.score_contribution !== undefined ? comparison.text.score_contribution.toFixed(3) : 'N/A'}</td>
+                                            </tr>
+                                            ${comparison.unspsc && comparison.unspsc.score_contribution !== undefined ? `
+                                            <tr>
+                                                <td>UNSPSC</td>
+                                                <td>${comparison.unspsc.score_contribution.toFixed(3)}</td>
+                                            </tr>
+                                            ` : ''}
+                                            ${comparison.gtin ? `
+                                            <tr>
+                                                <td>GTIN</td>
+                                                <td>${comparison.gtin.score_contribution.toFixed(3)}</td>
+                                            </tr>
+                                            ` : ''}
+                                            ${comparison.synergy_boost && comparison.synergy_boost.applied ? `
+                                            <tr class="table-success">
+                                                <td><strong>Synergy Boost</strong></td>
+                                                <td><strong>${comparison.synergy_boost.score_contribution.toFixed(3)}</strong></td>
+                                            </tr>
+                                            ` : ''}
+                                            <tr class="table-primary">
+                                                <td><strong>Total</strong></td>
+                                                <td><strong>${comparison.overall_score.toFixed(3)}</strong></td>
+                                            </tr>
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    `;
+}
+
+// Product selection management for scalable comparison
+let selectedProducts = [];
+
+function toggleProductSelection(checkbox, guid) {
+    const productId = checkbox.value;
+    
+    if (checkbox.checked) {
+        if (selectedProducts.length < 2) {
+            selectedProducts.push(productId);
+        } else {
+            checkbox.checked = false;
+            alert('You can only select 2 products to compare');
+            return;
+        }
+    } else {
+        selectedProducts = selectedProducts.filter(id => id !== productId);
+    }
+    
+    updateCompareButton();
+}
+
+function updateCompareButton() {
+    const button = document.getElementById('compareSelectedBtn');
+    if (button) {
+        button.disabled = selectedProducts.length !== 2;
+        button.innerHTML = `<i class="fas fa-balance-scale"></i> Compare Selected (${selectedProducts.length})`;
+    }
+}
+
+function compareSelectedProducts(qbiId) {
+    if (selectedProducts.length !== 2) {
+        alert('Please select exactly 2 products to compare');
+        return;
+    }
+    
+    const productA = selectedProducts[0];
+    const productB = selectedProducts[1];
+    
+    // Close the product details modal
+    const productModal = bootstrap.Modal.getInstance(document.getElementById('productDetailModal'));
+    if (productModal) {
+        productModal.hide();
+    }
+    
+    // Open comparison modal
+    const compareModal = new bootstrap.Modal(document.getElementById('compareModal'));
+    const compareBody = document.getElementById('compareModalBody');
+    
+    compareBody.innerHTML = '<div class="text-center"><div class="spinner-border" role="status"></div></div>';
+    compareModal.show();
+    
+    // Intelligent API selection: Try scalable first, fall back to traditional
+    // First, try scalable API (for golden_records.db output)
+    fetch(`/api/results/${resultsName}/compare-scalable/${qbiId}/${productA}/${productB}/`)
+        .then(response => {
+            if (response.status === 400) {
+                // Likely a traditional output (pair_scores.csv), try traditional API
+                console.log('Scalable API not available, trying traditional comparison API');
+                return fetch(`/api/results/${resultsName}/compare/${productA}/${productB}/`)
+                    .then(traditionalResponse => {
+                        if (!traditionalResponse.ok) {
+                            return traditionalResponse.text().then(text => {
+                                throw new Error(`HTTP ${traditionalResponse.status}: ${text}`);
+                            });
+                        }
+                        return traditionalResponse.json();
+                    });
+            } else if (!response.ok) {
+                return response.text().then(text => {
+                    throw new Error(`HTTP ${response.status}: ${text}`);
+                });
+            }
+            return response.json();
+        })
+        .then(data => {
+            if (data.error) {
+                compareBody.innerHTML = `<div class="alert alert-danger"><strong>Error:</strong> ${data.error}</div>`;
+                console.error('API Error:', data.error);
+                return;
+            }
+            
+            console.log('Comparison data received:', data);
+            
+            // Reuse the existing displayComparison function
+            // Note: displayComparison expects a single data object with product_a, product_b, and comparison
+            displayComparison(data);
+            
+            // Reset selection for next comparison
+            selectedProducts = [];
+            // Uncheck all checkboxes
+            document.querySelectorAll('.product-select-checkbox').forEach(cb => cb.checked = false);
+        })
+        .catch(error => {
+            compareBody.innerHTML = `<div class="alert alert-danger"><strong>Error loading comparison:</strong><br>${error.message}</div>`;
+            console.error('Fetch Error:', error);
+        });
+}
+
+// Jump to specific page for Pair Scores
+function jumpToPairScoresPage(maxPages) {
+    const pageInput = document.getElementById('pairScoresPageInput');
+    const pageNumber = parseInt(pageInput.value);
+    
+    if (isNaN(pageNumber) || pageNumber < 1 || pageNumber > maxPages) {
+        alert(`Please enter a valid page number between 1 and ${maxPages}`);
+        return;
+    }
+    
+    loadPairScores(pageNumber);
+    pageInput.value = ''; // Clear input after navigation
+}
+
+// Jump to specific page for Golden Records
+function jumpToGoldenRecordsPage(maxPages) {
+    const pageInput = document.getElementById('goldenRecordsPageInput');
+    const pageNumber = parseInt(pageInput.value);
+    
+    if (isNaN(pageNumber) || pageNumber < 1 || pageNumber > maxPages) {
+        alert(`Please enter a valid page number between 1 and ${maxPages}`);
+        return;
+    }
+    
+    loadGoldenRecords(pageNumber);
+    pageInput.value = ''; // Clear input after navigation
+}
+
+// Compare any two products by their IDs
+function compareAnyProducts() {
+    const productAId = document.getElementById('productAIdInput').value.trim();
+    const productBId = document.getElementById('productBIdInput').value.trim();
+    const errorDiv = document.getElementById('compareAnyError');
+    
+    // Clear previous errors
+    errorDiv.classList.add('d-none');
+    errorDiv.textContent = '';
+    
+    // Validate inputs
+    if (!productAId || !productBId) {
+        errorDiv.textContent = 'Please enter both product IDs';
+        errorDiv.classList.remove('d-none');
+        return;
+    }
+    
+    if (productAId === productBId) {
+        errorDiv.textContent = 'Please enter two different product IDs';
+        errorDiv.classList.remove('d-none');
+        return;
+    }
+    
+    // Close the input modal
+    const compareAnyModal = bootstrap.Modal.getInstance(document.getElementById('compareAnyModal'));
+    if (compareAnyModal) {
+        compareAnyModal.hide();
+    }
+    
+    // Open comparison modal
+    const compareModal = new bootstrap.Modal(document.getElementById('compareModal'));
+    const compareBody = document.getElementById('compareModalBody');
+    
+    compareBody.innerHTML = `
+        <div class="text-center">
+            <div class="spinner-border" role="status">
+                <span class="visually-hidden">Loading comparison...</span>
+            </div>
+            <p class="mt-2">Loading detailed comparison...</p>
+        </div>
+    `;
+    compareModal.show();
+    
+    // Encode product IDs for URL (handle special characters)
+    const encodedProductAId = encodeURIComponent(productAId);
+    const encodedProductBId = encodeURIComponent(productBId);
+    
+    // Fetch comparison data
+    fetch(`/api/results/${resultsName}/compare-any/${encodedProductAId}/${encodedProductBId}/`)
+        .then(response => {
+            if (!response.ok) {
+                return response.json().then(data => {
+                    throw new Error(data.error || `HTTP ${response.status}: ${response.statusText}`);
+                });
+            }
+            return response.json();
+        })
+        .then(data => {
+            if (data.error) {
+                compareBody.innerHTML = `<div class="alert alert-danger"><strong>Error:</strong> ${data.error}</div>`;
+                return;
+            }
+            
+            // Reuse the existing displayComparison function
+            displayComparison(data);
+        })
+        .catch(error => {
+            compareBody.innerHTML = `<div class="alert alert-danger"><strong>Error loading comparison:</strong><br>${error.message}</div>`;
+            console.error('Fetch Error:', error);
+        });
+}
+
+// Event listeners
+document.getElementById('scoreRange').addEventListener('input', function() {
+    document.getElementById('minScoreValue').textContent = this.value;
+    loadPairScores(1);
+});
+
+document.getElementById('searchInput').addEventListener('input', function() {
+    clearTimeout(this.searchTimeout);
+    this.searchTimeout = setTimeout(() => loadPairScores(1), 500);
+});
+
+document.getElementById('sizeFilter').addEventListener('change', () => loadGoldenRecords(1));
+document.getElementById('manufacturerFilter').addEventListener('input', function() {
+    clearTimeout(this.searchTimeout);
+    this.searchTimeout = setTimeout(() => loadGoldenRecords(1), 500);
+});
+document.getElementById('searchGoldenRecords').addEventListener('input', function() {
+    clearTimeout(this.searchTimeout);
+    this.searchTimeout = setTimeout(() => loadGoldenRecords(1), 500);
+});
+
+// Handle Enter key in Compare Any Products modal
+document.getElementById('productAIdInput')?.addEventListener('keypress', function(e) {
+    if (e.key === 'Enter') {
+        e.preventDefault();
+        compareAnyProducts();
+    }
+});
+
+document.getElementById('productBIdInput')?.addEventListener('keypress', function(e) {
+    if (e.key === 'Enter') {
+        e.preventDefault();
+        compareAnyProducts();
+    }
+});
+
+// Clear form when Compare Any Products modal is closed
+document.getElementById('compareAnyModal')?.addEventListener('hidden.bs.modal', function() {
+    document.getElementById('productAIdInput').value = '';
+    document.getElementById('productBIdInput').value = '';
+    document.getElementById('compareAnyError').classList.add('d-none');
+    document.getElementById('compareAnyError').textContent = '';
+});
+
+// Load initial data
+loadPairScores(1);
+loadGoldenRecords(1);
+</script>
+{% endblock %}

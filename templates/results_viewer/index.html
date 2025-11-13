@@ -1,0 +1,147 @@
+{% extends 'results_viewer/base.html' %}
+
+{% block content %}
+<div class="row">
+    <div class="col-12">
+        <h1 class="mb-4">
+            <i class="fas fa-chart-line"></i> Results Dashboard
+        </h1>
+        <p class="lead">Explore your Product Entity Resolution results</p>
+    </div>
+</div>
+
+<div class="row">
+    {% for result in available_results %}
+    <div class="col-md-6 col-lg-4 mb-4">
+        <div class="card product-card h-100">
+            <div class="card-header stats-card">
+                <div class="d-flex justify-content-between align-items-center">
+                    <h5 class="card-title mb-0">
+                        {% if result.source_type == 'database' %}
+                            {% if result.database_type == 'postgresql' %}
+                                <i class="fas fa-server"></i>
+                            {% else %}
+                                <i class="fas fa-database"></i>
+                            {% endif %}
+                        {% else %}
+                            <i class="fas fa-folder-open"></i>
+                        {% endif %}
+                        {{ result.display_name }}
+                    </h5>
+                    <div>
+                        {% if result.source_type == 'database' %}
+                            {% if result.connection_status == 'connected' %}
+                                <span class="badge bg-success">
+                                    <i class="fas fa-plug"></i> Connected
+                                </span>
+                            {% elif result.connection_status == 'offline' %}
+                                <span class="badge bg-danger">
+                                    <i class="fas fa-unlink"></i> Offline
+                                </span>
+                            {% else %}
+                                <span class="badge bg-warning">
+                                    <i class="fas fa-question"></i> {{ result.connection_status }}
+                                </span>
+                            {% endif %}
+                        {% elif result.is_scalable %}
+                            <span class="badge bg-info">
+                                <i class="fas fa-bolt"></i> Scalable
+                            </span>
+                        {% else %}
+                            <span class="badge bg-primary">
+                                <i class="fas fa-file-csv"></i> CSV
+                            </span>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+            <div class="card-body">
+                {% if result.stats %}
+                <div class="row text-center mb-3">
+                    <div class="col-6">
+                        <h4 class="text-primary">{{ result.stats.total_products }}</h4>
+                        <small class="text-muted">Total Products</small>
+                    </div>
+                    <div class="col-6">
+                        <h4 class="text-secondary">{{ result.stats.total_golden_records }}</h4>
+                        <small class="text-muted">Golden Records</small>
+                    </div>
+                </div>
+                
+                <div class="row text-center mb-3">
+                    <div class="col-6">
+                        <h4 class="text-success">{{ result.stats.matched_products }}</h4>
+                        <small class="text-muted">Matched</small>
+                    </div>
+                    <div class="col-6">
+                        <h4 class="text-info">{{ result.stats.unique_products }}</h4>
+                        <small class="text-muted">Unique</small>
+                    </div>
+                </div>
+                
+                <div class="row text-center mb-3">
+                    <div class="col-12">
+                        <h4 class="text-warning">{{ result.stats.avg_confidence|floatformat:3 }}</h4>
+                        <small class="text-muted">Avg Confidence</small>
+                    </div>
+                </div>
+                
+                {% if result.stats.top_manufacturers %}
+                <div class="mb-3">
+                    <small class="text-muted">Top Manufacturers:</small><br>
+                    {% for mfr, count in result.stats.top_manufacturers.items %}
+                        <span class="badge bg-secondary me-1 mb-1">{{ mfr }} ({{ count }})</span>
+                    {% endfor %}
+                </div>
+                {% endif %}
+                
+                {% if not result.is_scalable and result.source_type != 'database' %}
+                <div class="mb-3">
+                    <small class="text-muted">Pair Scores:</small><br>
+                    <span class="badge bg-info">{{ result.stats.total_pair_scores }} pairs</span>
+                </div>
+                {% endif %}
+                {% else %}
+                <p class="text-muted">No statistics available</p>
+                {% endif %}
+            </div>
+            <div class="card-footer">
+                <a href="{% url 'results_detail' result.name %}" class="btn btn-primary w-100">
+                    <i class="fas fa-eye"></i> View Details
+                </a>
+            </div>
+        </div>
+    </div>
+    {% empty %}
+    <div class="col-12">
+        <div class="alert alert-warning">
+            <i class="fas fa-exclamation-triangle"></i>
+            <h5>No results directories found</h5>
+            <p>Make sure your output directories contain the required CSV files:</p>
+            <ul>
+                <li><code>products.csv</code></li>
+                <li><code>links.csv</code></li>
+                <li><code>pair_scores.csv</code></li>
+            </ul>
+            <p class="mb-0">The interface looks for these files in the parent directory of this web interface.</p>
+        </div>
+    </div>
+    {% endfor %}
+</div>
+
+{% if available_results %}
+<div class="row mt-4">
+    <div class="col-12">
+        <div class="alert alert-info">
+            <h6><i class="fas fa-info-circle"></i> How to use this interface:</h6>
+            <ol class="mb-0">
+                <li>Click on any results directory to explore detailed results</li>
+                <li>View product pair similarity scores with interactive filtering</li>
+                <li>Browse golden records (consolidated products) with search capabilities</li>
+                <li>Click on product IDs to see detailed information and linked products</li>
+            </ol>
+        </div>
+    </div>
+</div>
+{% endif %}
+{% endblock %}
