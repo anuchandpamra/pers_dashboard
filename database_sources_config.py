@@ -9,6 +9,40 @@ Database sources are refreshed in real-time on each page load.
 
 import os
 
+
+def build_pg_connection_string(db_name, fallback='postgresql://localhost/{db_name}'):
+    """
+    Build a PostgreSQL connection string from environment variables.
+    
+    Uses PG_USER and PG_HOST environment variables (required).
+    PG_PWD is optional - if not provided, connection string will omit password.
+    PG_PORT is optional - if not provided, defaults to 5432 (not included in connection string).
+    If any required component is missing, falls back to the provided fallback string.
+    
+    Args:
+        db_name: Name of the database
+        fallback: Fallback connection string (supports {db_name} placeholder)
+    
+    Returns:
+        PostgreSQL connection string
+    """
+    # Try to build from components
+    user = os.environ.get('PG_USER')
+    pwd = os.environ.get('PG_PWD')
+    host = os.environ.get('PG_HOST')
+    port = os.environ.get('PG_PORT') or '5432'  # Default to 5432 if not set
+    
+    # If any required component is missing, use fallback
+    if not all([user, host]):
+        return fallback.format(db_name=db_name) if '{db_name}' in fallback else fallback
+    
+    # Include password only if provided
+    auth_part = f"{user}:{pwd}@" if pwd else f"{user}@"
+    # Include port only if it's not the default 5432
+    port_part = f":{port}" if port != '5432' else ""
+    return f"postgresql://{auth_part}{host}{port_part}/{db_name}"
+
+
 # PostgreSQL Database Sources
 # These will appear with 'pgsql_' prefix in URLs
 POSTGRESQL_SOURCES = [
@@ -84,9 +118,9 @@ POSTGRESQL_SOURCES = [
         'name': 'adv_data',
         'display_name': 'Advantage Data - Cummulative',
         'description': 'Production distributed entity resolution database',
-        'connection_string': os.environ.get(
-            'PGSQL_ADV_DATA',
-            'postgresql://localhost/adv_data'
+        'connection_string': build_pg_connection_string(
+            'adv_data',
+            fallback='postgresql://localhost/adv_data'
         ),
         'enabled': True,
         'type': 'postgresql'
@@ -95,9 +129,9 @@ POSTGRESQL_SOURCES = [
         'name': 'adv_test_0',
         'display_name': 'Advantage Data - Type 0',
         'description': 'Production distributed entity resolution database',
-        'connection_string': os.environ.get(
-            'PGSQL_ADV_TEST_0',
-            'postgresql://localhost/adv_test_0'
+        'connection_string': build_pg_connection_string(
+            'adv_test_0',
+            fallback='postgresql://localhost/adv_test_0'
         ),
         'enabled': True,
         'type': 'postgresql'
@@ -106,9 +140,9 @@ POSTGRESQL_SOURCES = [
         'name': 'adv_test_1',
         'display_name': 'Advantage Data - Type 1',
         'description': 'Production distributed entity resolution database',
-        'connection_string': os.environ.get(
-            'PGSQL_ADV_TEST_1',
-            'postgresql://localhost/adv_test_1'
+        'connection_string': build_pg_connection_string(
+            'adv_test_1',
+            fallback='postgresql://localhost/adv_test_1'
         ),
         'enabled': True,
         'type': 'postgresql'
@@ -117,9 +151,9 @@ POSTGRESQL_SOURCES = [
         'name': 'adv_test_2',
         'display_name': 'Advantage Data - Type 2',
         'description': 'Production distributed entity resolution database',
-        'connection_string': os.environ.get(
-            'PGSQL_ADV_TEST_2',
-            'postgresql://localhost/adv_test_2'
+        'connection_string': build_pg_connection_string(
+            'adv_test_2',
+            fallback='postgresql://localhost/adv_test_2'
         ),
         'enabled': True,
         'type': 'postgresql'
@@ -128,9 +162,9 @@ POSTGRESQL_SOURCES = [
         'name': 'adv_test_3',
         'display_name': 'Advantage Data - Type 3',
         'description': 'Production distributed entity resolution database',
-        'connection_string': os.environ.get(
-            'PGSQL_ADV_TEST_3',
-            'postgresql://localhost/adv_test_3'
+        'connection_string': build_pg_connection_string(
+            'adv_test_3',
+            fallback='postgresql://localhost/adv_test_3'
         ),
         'enabled': True,
         'type': 'postgresql'
@@ -139,9 +173,9 @@ POSTGRESQL_SOURCES = [
         'name': 'adv_test_4',
         'display_name': 'Advantage Data - Type 4',
         'description': 'Production distributed entity resolution database',
-        'connection_string': os.environ.get(
-            'PGSQL_ADV_TEST_4',
-            'postgresql://localhost/adv_test_4'
+        'connection_string': build_pg_connection_string(
+            'adv_test_4',
+            fallback='postgresql://localhost/adv_test_4'
         ),
         'enabled': True,
         'type': 'postgresql'
@@ -150,9 +184,9 @@ POSTGRESQL_SOURCES = [
         'name': 'adv_test_5',
         'display_name': 'Advantage Data - Type 5',
         'description': 'Production distributed entity resolution database',
-        'connection_string': os.environ.get(
-            'PGSQL_ADV_TEST_5',
-            'postgresql://localhost/adv_test_5'
+        'connection_string': build_pg_connection_string(
+            'adv_test_5',
+            fallback='postgresql://localhost/adv_test_5'
         ),
         'enabled': True,
         'type': 'postgresql'
@@ -161,9 +195,9 @@ POSTGRESQL_SOURCES = [
         'name': 'adv_test_6',
         'display_name': 'Advantage Data - Type 6',
         'description': 'Production distributed entity resolution database',
-        'connection_string': os.environ.get(
-            'PGSQL_ADV_TEST_6',
-            'postgresql://localhost/adv_test_6'
+        'connection_string': build_pg_connection_string(
+            'adv_test_6',
+            fallback='postgresql://localhost/adv_test_6'
         ),
         'enabled': True,
         'type': 'postgresql'
@@ -172,9 +206,9 @@ POSTGRESQL_SOURCES = [
         'name': 'adv_test_7',
         'display_name': 'Advantage Data - Type 7',
         'description': 'Production distributed entity resolution database',
-        'connection_string': os.environ.get(
-            'PGSQL_ADV_TEST_7',
-            'postgresql://localhost/adv_test_7'
+        'connection_string': build_pg_connection_string(
+            'adv_test_7',
+            fallback='postgresql://localhost/adv_test_7'
         ),
         'enabled': True,
         'type': 'postgresql'
@@ -183,9 +217,9 @@ POSTGRESQL_SOURCES = [
         'name': 'adv_test_8',
         'display_name': 'Advantage Data - Type 8',
         'description': 'Production distributed entity resolution database',
-        'connection_string': os.environ.get(
-            'PGSQL_ADV_TEST_8',
-            'postgresql://localhost/adv_test_8'
+        'connection_string': build_pg_connection_string(
+            'adv_test_8',
+            fallback='postgresql://localhost/adv_test_8'
         ),
         'enabled': True,
         'type': 'postgresql'
