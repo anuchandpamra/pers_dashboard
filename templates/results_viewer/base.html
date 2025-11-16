@@ -48,6 +48,19 @@
             height: 1rem;
         }
     </style>
+    <script>
+        // Make base path available to all JavaScript
+        // BASE_PATH is set by BasePathMiddleware and made available via context processor
+        window.DJANGO_BASE_PATH = '{{ BASE_PATH|default:"" }}';
+        
+        // Helper function for building API URLs
+        window.apiUrl = function(path) {
+            const basePath = window.DJANGO_BASE_PATH || '';
+            // Ensure path starts with / and basePath doesn't end with /
+            const cleanPath = path.startsWith('/') ? path : '/' + path;
+            return basePath + cleanPath;
+        };
+    </script>
 </head>
 <body>
     <nav class="navbar navbar-expand-lg navbar-dark bg-dark">

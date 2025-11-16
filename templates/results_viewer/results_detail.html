@@ -245,7 +245,7 @@ function loadPairScores(page = 1) {
     const minScore = document.getElementById('scoreRange').value;
     const search = document.getElementById('searchInput').value;
     
-    fetch(`/api/results/${resultsName}/pair-scores/?page=${page}&min_score=${minScore}&search=${search}`)
+    fetch(apiUrl(`/api/results/${resultsName}/pair-scores/?page=${page}&min_score=${minScore}&search=${search}`))
         .then(response => response.json())
         .then(data => {
             displayPairScores(data);
@@ -366,7 +366,7 @@ function loadGoldenRecords(page = 1) {
     const manufacturer = document.getElementById('manufacturerFilter').value;
     const search = document.getElementById('searchGoldenRecords').value;
     
-    fetch(`/api/results/${resultsName}/golden-records/?page=${page}&size=${sizeFilter}&manufacturer=${manufacturer}&search=${search}`)
+    fetch(apiUrl(`/api/results/${resultsName}/golden-records/?page=${page}&size=${sizeFilter}&manufacturer=${manufacturer}&search=${search}`))
         .then(response => response.json())
         .then(data => {
             displayGoldenRecords(data);
@@ -474,7 +474,7 @@ function showProductDetail(productId) {
     content.innerHTML = '<div class="text-center"><div class="spinner-border" role="status"></div></div>';
     modal.show();
     
-    fetch(`/api/results/${resultsName}/products/${productId}/`)
+    fetch(apiUrl(`/api/results/${resultsName}/products/${productId}/`))
         .then(response => response.json())
         .then(data => {
             // Check if this is scalable output (has size > 1 and multiple linked products)
@@ -610,7 +610,7 @@ function compareProducts(productA, productB) {
     bsModal.show();
     
     // Fetch comparison data
-    fetch(`/api/results/${resultsName}/compare/${productAId}/${productBId}/`)
+    fetch(apiUrl(`/api/results/${resultsName}/compare/${productAId}/${productBId}/`))
         .then(response => response.json())
         .then(data => {
             if (data.error) {
@@ -858,12 +858,12 @@ function compareSelectedProducts(qbiId) {
     
     // Intelligent API selection: Try scalable first, fall back to traditional
     // First, try scalable API (for golden_records.db output)
-    fetch(`/api/results/${resultsName}/compare-scalable/${qbiId}/${productA}/${productB}/`)
+    fetch(apiUrl(`/api/results/${resultsName}/compare-scalable/${qbiId}/${productA}/${productB}/`))
         .then(response => {
             if (response.status === 400) {
                 // Likely a traditional output (pair_scores.csv), try traditional API
                 console.log('Scalable API not available, trying traditional comparison API');
-                return fetch(`/api/results/${resultsName}/compare/${productA}/${productB}/`)
+                return fetch(apiUrl(`/api/results/${resultsName}/compare/${productA}/${productB}/`))
                     .then(traditionalResponse => {
                         if (!traditionalResponse.ok) {
                             return traditionalResponse.text().then(text => {
@@ -979,7 +979,7 @@ function compareAnyProducts() {
     const encodedProductBId = encodeURIComponent(productBId);
     
     // Fetch comparison data
-    fetch(`/api/results/${resultsName}/compare-any/${encodedProductAId}/${encodedProductBId}/`)
+    fetch(apiUrl(`/api/results/${resultsName}/compare-any/${encodedProductAId}/${encodedProductBId}/`))
         .then(response => {
             if (!response.ok) {
                 return response.json().then(data => {
